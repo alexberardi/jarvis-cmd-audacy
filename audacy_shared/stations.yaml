@@ -1,0 +1,179 @@
+# Audacy station catalog. Each entry maps to a live stream that the
+# stream_resolver builds an AmperWave URL for, with a StreamTheWorld
+# fallback. Aliases drive fuzzy lookup against the voice query.
+#
+# Fields:
+#   callsign       — official station call letters (used to derive URLs)
+#   band           — "am" or "fm" (used to build the AmperWave slug)
+#   display_name   — what we speak back to the user
+#   aliases        — phrases the user might say; case-insensitive substring match
+#   format         — content category: sports | news | rock | pop | country | talk | alt
+#   market         — city/region (for future per-market preferences)
+#   stream_url     — optional override; if set, the resolver uses it verbatim
+#                    instead of constructing AmperWave/StreamTheWorld URLs
+
+stations:
+  # --- Sports ---
+  - callsign: WFAN
+    band: am
+    display_name: Sports Radio 66 WFAN
+    aliases: ["wfan", "the fan", "sports radio 66", "660 wfan", "sixty six"]
+    format: sports
+    market: New York
+
+  - callsign: WSCR
+    band: am
+    display_name: 670 The Score
+    aliases: ["the score", "670 the score", "score", "670"]
+    format: sports
+    market: Chicago
+
+  - callsign: WIP
+    band: fm
+    display_name: 94 WIP Sports Radio
+    aliases: ["wip", "94 wip", "ninety four wip", "sports radio philadelphia"]
+    format: sports
+    market: Philadelphia
+
+  - callsign: WBZ
+    band: fm
+    display_name: 98.5 The Sports Hub
+    aliases: ["the sports hub", "98.5 the sports hub", "sports hub", "98.5"]
+    format: sports
+    market: Boston
+
+  - callsign: KGMZ
+    band: fm
+    display_name: 95.7 The Game
+    aliases: ["the game", "95.7 the game", "957 the game"]
+    format: sports
+    market: San Francisco
+
+  - callsign: KILT
+    band: am
+    display_name: SportsRadio 610
+    aliases: ["sports radio 610", "six ten", "610 am", "kilt"]
+    format: sports
+    market: Houston
+
+  - callsign: KRLD
+    band: fm
+    display_name: 105.3 The Fan
+    aliases: ["the fan dallas", "105.3 the fan", "105 three the fan"]
+    format: sports
+    market: Dallas
+
+  - callsign: WEEI
+    band: fm
+    display_name: WEEI Sports Radio
+    aliases: ["weei", "weei sports", "sports radio boston"]
+    format: sports
+    market: Boston
+
+  - callsign: WGFX
+    band: fm
+    display_name: 104.5 The Zone
+    aliases: ["the zone", "104.5 the zone", "the zone nashville"]
+    format: sports
+    market: Nashville
+
+  # --- News ---
+  - callsign: WINS
+    band: am
+    display_name: 1010 WINS
+    aliases: ["1010 wins", "ten ten wins", "wins", "wins news"]
+    format: news
+    market: New York
+
+  - callsign: WCBS
+    band: am
+    display_name: WCBS Newsradio 880
+    aliases: ["wcbs", "newsradio 880", "880 am", "wcbs newsradio"]
+    format: news
+    market: New York
+
+  - callsign: WBBM
+    band: am
+    display_name: WBBM Newsradio
+    aliases: ["wbbm", "wbbm newsradio", "newsradio chicago", "780 am"]
+    format: news
+    market: Chicago
+
+  - callsign: KCBS
+    band: am
+    display_name: KCBS All News 740
+    aliases: ["kcbs", "kcbs all news", "740 am", "all news 740"]
+    format: news
+    market: San Francisco
+
+  - callsign: KNX
+    band: fm
+    display_name: KNX News 97.1
+    aliases: ["knx", "knx news", "97.1 knx", "knx 1070"]
+    format: news
+    market: Los Angeles
+
+  - callsign: KYW
+    band: am
+    display_name: KYW Newsradio
+    aliases: ["kyw", "kyw newsradio", "newsradio philadelphia"]
+    format: news
+    market: Philadelphia
+
+  - callsign: WBZ
+    band: am
+    display_name: WBZ NewsRadio 1030
+    aliases: ["wbz", "wbz news", "newsradio 1030"]
+    format: news
+    market: Boston
+
+  # --- Rock / Pop ---
+  - callsign: KROQ
+    band: fm
+    display_name: KROQ 106.7
+    aliases: ["kroq", "k rock", "k-rock", "106.7 kroq", "world famous kroq"]
+    format: alt
+    market: Los Angeles
+
+  - callsign: WAXQ
+    band: fm
+    display_name: Q104.3 New York's Classic Rock
+    aliases: ["q104", "q104.3", "q one oh four", "classic rock new york"]
+    format: rock
+    market: New York
+
+  - callsign: WMMR
+    band: fm
+    display_name: 93.3 WMMR
+    aliases: ["wmmr", "mmr", "93.3 wmmr", "ninety three three"]
+    format: rock
+    market: Philadelphia
+
+  - callsign: KLOS
+    band: fm
+    display_name: 95.5 KLOS
+    aliases: ["klos", "95.5 klos", "ninety five five klos"]
+    format: rock
+    market: Los Angeles
+
+  - callsign: WZLX
+    band: fm
+    display_name: 100.7 WZLX Classic Rock
+    aliases: ["wzlx", "100.7 wzlx", "classic rock boston"]
+    format: rock
+    market: Boston
+
+  # --- Country ---
+  - callsign: WUSN
+    band: fm
+    display_name: US99 Chicago Country
+    aliases: ["us99", "us ninety nine", "country chicago"]
+    format: country
+    market: Chicago
+
+  - callsign: KMLE
+    band: fm
+    display_name: 107.9 KMLE Country
+    aliases: ["kmle", "107.9 kmle", "country phoenix"]
+    format: country
+    market: Phoenix

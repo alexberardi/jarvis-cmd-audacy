@@ -1,0 +1,183 @@
+schema_version: 1
+name: audacy
+display_name: Audacy
+description: >
+  Stream live radio from the Audacy network (sports, news, talk, music)
+  on this node — direct stream playback through mpd, no Music Assistant
+  or other external server required.
+version: 0.1.0
+min_jarvis_version: "0.9.0"
+license: MIT
+author:
+  github: alexberardi
+
+categories:
+  - media
+  - music
+  - sports
+  - news
+platforms:
+  - darwin
+  - linux
+keywords:
+  - audacy
+  - radio
+  - live radio
+  - sports radio
+  - news radio
+  - wfan
+  - kroq
+  - the score
+  - talk radio
+  - streamtheworld
+  - amperwave
+
+components:
+  - type: command
+    name: audacy
+    path: commands/audacy/command.py
+
+# Python dependencies (PyYAML drives the station catalog).
+packages:
+  - name: PyYAML
+    version: ">=6.0"
+
+# System dependency: mpd is the long-lived playback daemon.
+# We talk to it over its TCP control protocol from inside the command
+# (no subprocess calls live in this package's code).
+apt_packages:
+  - mpd
+
+# Declarative post-install op applied by the node's sudoers-gated
+# jarvis-post-install wrapper. Bounded by the Pantry-side allow-list
+# (jarvis-pantry/config/post-install-allowlist.yaml).
+#
+# Net effect: re-parent mpd.service to the node user, route audio through
+# PulseAudio (via the per-package config at audacy_shared/audacy_mpd.conf),
+# and order the unit after the user session so it doesn't start before
+# pulse is ready. This avoids touching /etc/mpd.conf entirely — see the
+# audacy_mpd.conf header for the architecture rationale.
+post_install:
+  # Re-parent mpd.service to the node user, route through PulseAudio, and
+  # point mpd at a per-package config (audacy_shared/audacy_mpd.conf) so
+  # we never have to touch /etc/mpd.conf. The static config ships with
+  # the package and is copied to the user's lib dir during _install_shared_code
+  # — which runs BEFORE this post_install op, so the file exists by the
+  # time systemctl restart mpd fires.
+  #
+  # ${UID} / ${USER} / ${HOME} are substituted by the install pipeline
+  # (services/command_store_service._expand_post_install_tokens) to the
+  # node user's actual values. We avoid systemd's own %U / %h specifiers
+  # because %h resolves to the *manager's* home (root in system mode),
+  # not the User=user's home — which would point MPDCONF at /root/...
+  # and fail.
+  - type: configure_systemd_service
+    service: mpd
+    run_as: jarvis_user
+    group: audio
+    environment:
+      MPDCONF: "${HOME}/.jarvis/packages/audacy/audacy_lib/audacy_shared/audacy_mpd.conf"
+      XDG_RUNTIME_DIR: "/run/user/${UID}"
+      PULSE_RUNTIME_PATH: "/run/user/${UID}/pulse"
+    wants:
+      - "user@${UID}.service"
+    after:
+      - "user@${UID}.service"
+    restart: on-failure
+    restart_sec: 5
+
+# No secrets — Audacy live streams don't require authentication.
+secrets: []
+
+setup_guide: |
+  ## What this does
+
+  This command streams live radio from the **Audacy** network — sports
+  talk (WFAN, 670 The Score, 94 WIP), news (1010 WINS, KCBS, WBBM),
+  music (KROQ, Q104.3, WMMR) and more. Audacy doesn't require a login
+  for live streams; the package ships with a built-in catalog of common
+  stations.
+
+  ```
+  You: "Play WFAN radio"
+      │
+      ▼
+  Jarvis command-center  →  audacy command  →  mpd (local daemon)
+                                                       │
+                                       HTTP/HLS stream │
+                                                       ▼
+                                              PulseAudio / PipeWire
+                                                       │
+                                                       ▼
+                                       Local speaker  -or-  paired BT speaker
+  ```
+
+  ## What the install does
+
+  When you install this package, the node:
+
+  1. Cloned this package from GitHub.
+  2. Ran the Pantry-allowlist check against `mpd` (allowed).
+  3. Called the node's `sudo`-gated `jarvis-apt-install` helper to
+     install `mpd` (apt install -y, no recommends, no other privileges).
+  4. Installed `PyYAML` as a pip dep (drives the station catalog).
+  5. Copied the package's `audacy_shared/audacy_mpd.conf` into the
+     node user's `~/.jarvis/packages/audacy/audacy_lib/audacy_shared/`
+     dir (no privileges needed — the install runs as the node user).
+  6. Re-parented `mpd.service` to run as the node user, set
+     `Environment=MPDCONF=...` to point mpd at the per-package config
+     from step 5, and ordered the unit after `user@<uid>.service` so it
+     starts only once the user pulse session is up.
+
+  No subprocess calls or sudo invocations live in this package's own
+  code — every privileged step went through the same audited path as
+  every other Pantry package. The system `/etc/mpd.conf` is left
+  untouched.
+
+  ## Talking to it
+
+  Most phrasings work; the most reliable are:
+
+  - **"Play WFAN radio"** — strongest signal, will always route here.
+  - **"Tune in to 670 The Score"** — same.
+  - **"Play KROQ"** — works because KROQ is a known call sign.
+  - **"Stop the radio"** / **"Stop Audacy"** — stops playback.
+  - **"What station is this?"** — current station.
+  - **"What Audacy stations do you have?"** — lists the catalog.
+
+  Bare *"play X"* where X isn't a known call sign will route elsewhere
+  (Spotify / Music Assistant / Pandora) — Audacy intentionally claims
+  narrowly so it doesn't steal music searches from your real library.
+
+  ## Adding stations
+
+  Stations live in `audacy_shared/stations.yaml`. Each entry needs a
+  callsign, band (am/fm), display name, and a few aliases the user might
+  say. The stream URL is constructed automatically from AmperWave's
+  conventional slug; if a station doesn't follow the convention, add
+  `stream_url:` with an explicit URL.
+
+  ## Troubleshooting
+
+  ### "I can't reach the stream" voice response
+
+  - On macOS dev: install mpd via `brew install mpd` and start it via
+    `brew services start mpd`. The post-install ops only run on Linux.
+  - On a Pi: check `sudo systemctl status mpd` — should be
+    `active (running)`. If it's failing, `journalctl -u mpd -n 50` will
+    show why.
+
+  ### Music plays through the wrong speaker
+
+  mpd writes to the node's PulseAudio default sink — same as everything
+  else on the node. If a Bluetooth speaker is paired and active, audio
+  follows it; otherwise it plays on the local speaker. To change which
+  sink is default, use `pactl set-default-sink`.
+
+  ### Station not in the catalog
+
+  Some Audacy stations don't follow the standard AmperWave slug
+  convention. Add the station to `audacy_shared/stations.yaml` with an
+  explicit `stream_url:` field — find the URL by playing the station in
+  Audacy's web player and grabbing the `.m3u8` or AAC URL from the
+  browser's network tab.
