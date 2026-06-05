@@ -5,7 +5,7 @@ description: >
   Stream live radio from the Audacy network (sports, news, talk, music)
   on this node — direct stream playback through mpd, no Music Assistant
   or other external server required.
-version: 0.1.0
+version: 0.1.1
 min_jarvis_version: "0.9.0"
 license: MIT
 author:
