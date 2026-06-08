@@ -426,6 +426,21 @@ class AudacyCommand(IJarvisCommand):
                 context_data={"error": "unknown_station", "query": station_query},
             )
 
+        # Probe mpd before we commit to the "Playing X" TTS. If mpd is dead
+        # (e.g. unit not enabled across reboot, or crashed), the deferred
+        # play would fail silently and the user would only hear the
+        # confirmation. Surface the real failure now so they hear something
+        # actionable. See prds/audacy-mpd-install-gap.md.
+        if not service.mpd_alive():
+            return CommandResponse.error_response(
+                error_details=(
+                    "I can't reach the audio player on this node — looks like "
+                    "mpd isn't running. Try `sudo systemctl enable --now mpd` "
+                    "on the node."
+                ),
+                context_data={"error": "mpd_unreachable", "query": station_query},
+            )
+
         # Defer the actual mpd play until after TTS finishes, so the first
         # seconds of the stream don't get ducked under the spoken response.
         # Same pattern Pandora and music-assistant use.

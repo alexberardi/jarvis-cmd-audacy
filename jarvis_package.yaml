@@ -5,7 +5,7 @@ description: >
   Stream live radio from the Audacy network (sports, news, talk, music)
   on this node — direct stream playback through mpd, no Music Assistant
   or other external server required.
-version: 0.1.1
+version: 0.1.2
 min_jarvis_version: "0.9.0"
 license: MIT
 author:
@@ -73,6 +73,13 @@ post_install:
   # and fail.
   - type: configure_systemd_service
     service: mpd
+    # enable: true is load-bearing. Debian's mpd.service ships disabled
+    # (preset: enabled, loaded state: disabled). Without this, the
+    # restart on install works but the unit doesn't come back after a
+    # reboot — audacy then synthesizes the "Playing X" confirmation but
+    # mpd refuses on localhost:6600 and no audio comes out. The command's
+    # pre-route mpd-liveness probe is the defense-in-depth catch.
+    enable: true
     run_as: jarvis_user
     group: audio
     environment:

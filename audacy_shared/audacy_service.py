@@ -65,6 +65,17 @@ class AudacyService:
             return False
         return status.state == "play" and status.current_url is not None
 
+    def mpd_alive(self) -> bool:
+        """True iff mpd is reachable on its control socket.
+
+        Used by ``_handle_play`` to fail fast with a clear voice response
+        when the local mpd daemon isn't running — otherwise the user hears
+        a confident "Playing X" TTS confirmation, then silence (the
+        deferred-play callback hits ECONNREFUSED and only logs). See
+        prds/audacy-mpd-install-gap.md for the original incident.
+        """
+        return self._mpd.ping()
+
     def now_playing(self) -> Station | None:
         return self._current if self.is_playing() else None
 
