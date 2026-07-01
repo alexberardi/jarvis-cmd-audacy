@@ -7,7 +7,7 @@ description: >
   or other external server required.
 version: 0.1.2
 min_jarvis_version: "0.9.0"
-license: MIT
+license: Apache-2.0
 author:
   github: alexberardi
 
