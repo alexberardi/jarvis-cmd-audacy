@@ -46,6 +46,13 @@ from jarvis_command_sdk import (
     RequestInformation,
 )
 
+try:
+    from jarvis_command_sdk import IJarvisMusicCommand, PlaybackState
+except ImportError:  # SDK < 0.16: a plain command; nothing asks it for playback
+    class IJarvisMusicCommand(IJarvisCommand):  # type: ignore[no-redef]
+        def report(self, state: Any = None) -> bool:
+            return False
+
 from audacy_shared.audacy_service import AudacyService, PlaybackError, get_service
 
 logger = JarvisLogger(service="cmd.audacy")
@@ -101,13 +108,45 @@ _BARE_STOP_PHRASES = {
 _JUNK_QUERIES = {"", "radio", "audacy", "audacy radio", "music", "something"}
 
 
-class AudacyCommand(IJarvisCommand):
+class AudacyCommand(IJarvisMusicCommand):
     """Stream live Audacy stations with voice control."""
 
     def __init__(self) -> None:
         # No JarvisStorage needed — Audacy v1 has no secrets and no
         # per-user state beyond the in-memory service singleton.
         pass
+
+    # -- Playback (IJarvisMusicCommand) ---------------------------------------
+    # The node's display, the mobile app and the built-in "pause the music" commands read and
+    # control mpd through these. Every state is read from mpd, never assumed.
+
+    @property
+    def playback_binary(self) -> str:
+        return "mpd"
+
+    def playback_status(self) -> Any:
+        now = get_service().status()
+        if now is None:
+            return None
+        station, st = now
+        # Live radio: no position, duration, skip or seek.
+        return PlaybackState(
+            state="paused" if st.state == "pause" else "playing",
+            media_title=st.title or station.display_name,
+            context=station.display_name,
+            volume=st.volume,
+            actions=("play", "pause") + (("volume",) if st.volume is not None else ()),
+        )
+
+    def playback_control(self, action: str, **args: Any) -> Any:
+        service = get_service()
+        if action in ("play", "pause"):
+            service.pause(action == "pause")
+        elif action == "volume":
+            service.set_volume(int(args["volume"]))
+        else:
+            raise ValueError(f"audacy does not support {action!r}")
+        return self.playback_status()
 
     # ------------------------------------------------------------------
     # Metadata
@@ -447,6 +486,7 @@ class AudacyCommand(IJarvisCommand):
         def _start_playback() -> None:
             try:
                 service.play_station(station_query)
+                self.report()
             except PlaybackError as e:
                 logger.error(
                     "Deferred Audacy play failed",
@@ -473,6 +513,7 @@ class AudacyCommand(IJarvisCommand):
         self, service: AudacyService, _station: str | None,
     ) -> CommandResponse:
         service.stop()
+        self.report()
         return CommandResponse.success_response(
             context_data={"action": "stop", "message": "Audacy stopped."},
         )

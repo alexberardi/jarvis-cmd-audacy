@@ -1,7 +1,7 @@
 """Minimal MPD client — pure stdlib, blocking sockets.
 
 We only need the verbs Audacy uses: clear queue, add stream URL, play, stop,
-status. No password support (mpd runs on localhost), no idle subscriptions,
+pause, volume, status. No password support (mpd runs on localhost), no idle subscriptions,
 no playlist management.
 
 Why not python-mpd2? It's a fine library but it adds a runtime dep for what
@@ -29,8 +29,9 @@ class MPDError(RuntimeError):
 @dataclass
 class MPDStatus:
     state: str  # "play" | "stop" | "pause"
-    volume: int | None
+    volume: int | None  # None when mpd has no mixer (it reports -1)
     current_url: str | None
+    title: str | None = None  # the stream's "now on air" (ICY) title, when it sends one
 
 
 class MPDClient:
@@ -61,6 +62,12 @@ class MPDClient:
     def stop(self) -> None:
         self._exchange([("stop", [])])
 
+    def pause(self, paused: bool) -> None:
+        self._exchange([("pause", ["1" if paused else "0"])])
+
+    def set_volume(self, volume: int) -> None:
+        self._exchange([("setvol", [str(max(0, min(100, volume)))])])
+
     def status(self) -> MPDStatus:
         """Snapshot of mpd's playback state."""
         lines = self._exchange([("status", []), ("currentsong", [])])
@@ -71,10 +78,11 @@ class MPDClient:
                 kv[k.strip()] = v.strip()
         state = kv.get("state", "stop")
         volume_raw = kv.get("volume")
-        volume = int(volume_raw) if volume_raw and volume_raw.lstrip("-").isdigit() else None
+        volume = int(volume_raw) if volume_raw and volume_raw.isdigit() else None
         # mpd reports the playing source under "file:" (for streams, that's the URL)
         current_url = kv.get("file")
-        return MPDStatus(state=state, volume=volume, current_url=current_url)
+        return MPDStatus(state=state, volume=volume, current_url=current_url,
+                         title=kv.get("Title") or None)
 
     def ping(self) -> bool:
         """True iff mpd is reachable and responsive."""

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .mpd_client import MPDClient, MPDError
+from .mpd_client import MPDClient, MPDError, MPDStatus
 from .station_catalog import Station, resolve as _catalog_resolve
 from .stream_resolver import stream_urls
 
@@ -79,6 +79,19 @@ class AudacyService:
     def now_playing(self) -> Station | None:
         return self._current if self.is_playing() else None
 
+    def status(self) -> tuple[Station, MPDStatus] | None:
+        """The station and mpd's state, read now; None unless an Audacy stream is loaded
+        (playing or paused)."""
+        if self._current is None:
+            return None
+        try:
+            status = self._mpd.status()
+        except (MPDError, OSError):
+            return None
+        if status.state not in ("play", "pause") or status.current_url is None:
+            return None
+        return self._current, status
+
     # ------------------------------------------------------------------
     # Playback verbs
     # ------------------------------------------------------------------
@@ -136,6 +149,12 @@ class AudacyService:
         except (MPDError, OSError):
             pass
         self._current = None
+
+    def pause(self, paused: bool) -> None:
+        self._mpd.pause(paused)
+
+    def set_volume(self, volume: int) -> None:
+        self._mpd.set_volume(volume)
 
     def healthcheck(self) -> bool:
         return self._mpd.ping()
