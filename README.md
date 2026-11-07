@@ -48,6 +48,14 @@ TCP control protocol (`localhost:6600`). On install, the node:
    completely untouched (avoiding the `user "mpd"` directive and
    mpd-user-owned `/var/lib/mpd` dirs that would otherwise need root).
 
+### Now playing on the display and in the app
+
+`AudacyCommand` is an `IJarvisMusicCommand` (SDK 0.16+). The node reads what
+mpd is playing (the station, the stream's on-air title when it sends one, and
+the volume) and shows it on the display and in the mobile app, with play,
+pause and volume controls. Live radio has no position, skip or seek. On an
+older SDK it stays a plain command.
+
 ## Architecture
 
 ```
